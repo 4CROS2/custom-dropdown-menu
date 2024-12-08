@@ -1,3 +1,3 @@
 library custom_dropdown_menu;
 
-export '';
+export 'package:custom_dropdown_menu/src/presentation/custom_dropdown_menu.dart';
