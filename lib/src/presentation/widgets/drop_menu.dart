@@ -1,5 +1,3 @@
-import 'package:custom_dropdown_menu/src/core/constants/constants.dart';
-import 'package:extensions/extensions.dart';
 import 'package:flutter/material.dart';
 
 class DropMenu extends StatefulWidget {
@@ -20,11 +18,12 @@ class DropMenu extends StatefulWidget {
 class _DropMenuState extends State<DropMenu> with TickerProviderStateMixin {
   late final AnimationController _animationController;
   late final Animation<double> _scaleAnimation;
-  late final List<AnimationController> _fadeControllers;
+  late final List<Animation<double>> _fadeAnimations;
 
   @override
   void initState() {
     super.initState();
+
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 400),
@@ -33,133 +32,78 @@ class _DropMenuState extends State<DropMenu> with TickerProviderStateMixin {
     _scaleAnimation = TweenSequence<double>(<TweenSequenceItem<double>>[
       TweenSequenceItem<double>(
         tween: Tween<double>(begin: 0, end: 1.05).chain(
-          CurveTween(
-            curve: Curves.easeOut,
-          ),
+          CurveTween(curve: Curves.easeOut),
         ),
-        weight: 70, // Expansión inicial
+        weight: 70,
       ),
       TweenSequenceItem<double>(
-        tween: Tween<double>(begin: 1.0, end: 1).chain(
-          CurveTween(
-            curve: Curves.easeIn,
-          ),
+        tween: Tween<double>(begin: 1.05, end: 1).chain(
+          CurveTween(curve: Curves.easeIn),
         ),
-        weight: 20, // Contracción a estado final
+        weight: 20,
       ),
     ]).animate(_animationController);
 
-    _fadeControllers = List<AnimationController>.generate(
+    // Generar animaciones de desvanecimiento basadas en un único controlador
+    _fadeAnimations = List<Animation<double>>.generate(
       widget._options.length,
       (int index) {
-        final AnimationController controller = AnimationController(
-          vsync: this,
-          duration: const Duration(milliseconds: 400),
+        final double start = 0.5 + (index * 0.1);
+        final double end = start + 0.2;
+        return Tween<double>(begin: 0, end: 1).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Interval(
+              start.clamp(0.0, 1.0),
+              end.clamp(0.0, 1.0),
+              curve: Curves.easeIn,
+            ),
+          ),
         );
-        return controller;
       },
     );
 
-    _animationController.addListener(() {
-      if (_animationController.value >= 0.5) {
-        _triggerFadeAnimations();
-      }
-    });
-
     _animationController.forward();
-  }
-
-  void _triggerFadeAnimations() {
-    for (int i = 0; i < _fadeControllers.length; i++) {
-      Future<void>.delayed(
-        Duration(milliseconds: i * 100), // Escalona los delays
-        () {
-          if (mounted &&
-              _fadeControllers[i].status == AnimationStatus.dismissed) {
-            _fadeControllers[i].forward();
-          }
-        },
-      );
-    }
   }
 
   @override
   void dispose() {
     _animationController.dispose();
-    for (final AnimationController controller in _fadeControllers) {
-      controller.dispose();
-    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return AnimatedBuilder(
       animation: _animationController,
       builder: (BuildContext context, Widget? child) {
-        return FadeTransition(
-          opacity: _scaleAnimation,
-          child: ScaleTransition(
-            scale: _scaleAnimation,
-            alignment: Alignment.topCenter,
-            child: child,
-          ),
+        return ScaleTransition(
+          scale: _scaleAnimation,
+          alignment: Alignment.topCenter,
+          child: child,
         );
       },
       child: Material(
         elevation: 1,
-        borderRadius: Constants.mainBorderRadius,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            minWidth: 140,
-            maxWidth: 250,
-          ),
-          child: Padding(
-            padding: EdgeInsets.all(Constants.paddingValue),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: List<Widget>.generate(
-                widget._options.length,
-                (int index) {
-                  return FadeTransition(
-                    opacity: _fadeControllers[index].drive(
-                      CurveTween(
-                        curve: Curves.easeIn,
-                      ),
-                    ),
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        top: index == 0 ? 0 : 12,
-                      ),
-                      child: Material(
-                        color: isDarkMode ? Colors.black12 : Colors.white,
-                        clipBehavior: Clip.hardEdge,
-                        borderRadius: Constants.mainBorderRadius / 2,
-                        child: InkWell(
-                          onTap: () {
-                            Navigator.of(context).pop();
-                            widget._onSelected(widget._options[index]);
-                          },
-                          child: Padding(
-                            padding: Constants.authInputContent,
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                widget._options[index].capitalize(),
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: List<Widget>.generate(
+              widget._options.length,
+              (int index) {
+                return FadeTransition(
+                  opacity: _fadeAnimations[index],
+                  child: ListTile(
+                    title: Text(widget._options[index]),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      widget._onSelected(widget._options[index]);
+                    },
+                  ),
+                );
+              },
             ),
           ),
         ),
