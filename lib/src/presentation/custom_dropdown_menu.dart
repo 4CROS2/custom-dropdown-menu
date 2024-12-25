@@ -1,9 +1,12 @@
+import 'package:custom_dropdown_menu/src/core/constants/constants.dart';
 import 'package:custom_dropdown_menu/src/presentation/widgets/drop_menu.dart';
 import 'package:flutter/material.dart';
 
 class CustomDropdownMenu {
   static Future<void> showCustomMenu(
     BuildContext context, {
+    Duration? duration,
+    double? spacing,
     required GlobalKey widgetKey,
     required List<String> options,
     required Function(String) onSelected,
@@ -15,17 +18,30 @@ class CustomDropdownMenu {
 
     final Size screenSize = MediaQuery.of(context).size;
 
+    // Definir tamaño fijo del menú
+    const double menuWidth = 220.0;
+    const double horizontalMargin = 16.0; // Margen lateral mínimo
     final double menuHeight = options.length * 50.0;
 
-    double topPosition = offset.dy + size.height;
+    // Calcular posición superior e inferior
+    double topPosition = offset.dy + size.height / 4;
     double bottomSpace = screenSize.height - topPosition;
 
+    // Ajustar la posición superior si no hay suficiente espacio abajo
     if (bottomSpace < menuHeight) {
-      topPosition = offset.dy - menuHeight;
+      topPosition =
+          offset.dy - menuHeight - size.height / 2; // Ajustar hacia arriba
     }
 
+    // Clampear la posición superior para evitar desbordes
     topPosition = topPosition.clamp(0.0, screenSize.height - menuHeight);
 
+    // Calcular posición horizontal (centrado respecto al widget)
+    final double leftPosition = (offset.dx + size.width / 2 - menuWidth / 2)
+        .clamp(
+            horizontalMargin, screenSize.width - menuWidth - horizontalMargin);
+
+    // Mostrar el menú
     await showDialog(
       context: context,
       barrierDismissible: true,
@@ -33,24 +49,15 @@ class CustomDropdownMenu {
       builder: (BuildContext context) {
         return Stack(
           children: <Widget>[
-            GestureDetector(
-                onTap: () {
-                  Navigator.of(context).pop();
-                },
-                child: const SizedBox(
-                  width: double.infinity,
-                  height: double.infinity,
-                )),
-            // Menú personalizado
             Positioned(
-              left: offset.dx.clamp(
-                0.0,
-                screenSize.width - 250,
-              ),
-              top: topPosition - 20,
+              left: leftPosition,
+              top: topPosition,
               child: DropMenu(
                 options: options,
                 onSelected: onSelected,
+                duration: duration,
+                spacing: spacing ?? Constants.paddingValue,
+                width: menuWidth, // Pasar el ancho fijo al DropMenu
               ),
             ),
           ],
@@ -59,37 +66,3 @@ class CustomDropdownMenu {
     );
   }
 }
-
-/* 
-
-// CustomPainter para dibujar la flecha
-class ArrowPainter extends CustomPainter {
-  final Offset arrowPosition;
-
-  ArrowPainter({required this.arrowPosition});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()
-      ..color = Colors.black
-      ..style = PaintingStyle.fill;
-
-    // Dibuja la flecha
-    final Path path = Path();
-    path.moveTo(arrowPosition.dx + 15, arrowPosition.dy);
-    path.lineTo(arrowPosition.dx + 10, arrowPosition.dy - 10);
-    path.lineTo(arrowPosition.dx + 20, arrowPosition.dy - 10);
-    path.close();
-
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) {
-    return false;
-  }
-}
-
-
-
- */

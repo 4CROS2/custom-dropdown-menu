@@ -5,13 +5,21 @@ import 'package:flutter/material.dart';
 class DropMenu extends StatefulWidget {
   const DropMenu({
     required List<String> options,
-    required Function(String) onSelected,
+    required double spacing,
+    required Function(String value) onSelected,
+    double? width,
+    Duration? duration,
     super.key,
   })  : _onSelected = onSelected,
+        _width = width,
+        _duration = duration,
         _options = options;
 
   final List<String> _options;
   final Function(String) _onSelected;
+  final Duration? _duration;
+
+  final double? _width;
 
   @override
   State<DropMenu> createState() => _DropMenuState();
@@ -27,27 +35,35 @@ class _DropMenuState extends State<DropMenu> with TickerProviderStateMixin {
     super.initState();
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 400),
+      duration: widget._duration ?? const Duration(milliseconds: 400),
     );
 
-    _scaleAnimation = TweenSequence<double>(<TweenSequenceItem<double>>[
-      TweenSequenceItem<double>(
-        tween: Tween<double>(begin: 0, end: 1.05).chain(
-          CurveTween(
-            curve: Curves.easeOut,
+    _scaleAnimation = TweenSequence<double>(
+      <TweenSequenceItem<double>>[
+        TweenSequenceItem<double>(
+          tween: Tween<double>(
+            begin: 0,
+            end: 1.05,
+          ).chain(
+            CurveTween(
+               curve: Curves.decelerate,
+            ),
           ),
+          weight: 50,
         ),
-        weight: 70, // Expansión inicial
-      ),
-      TweenSequenceItem<double>(
-        tween: Tween<double>(begin: 1.0, end: 1).chain(
-          CurveTween(
-            curve: Curves.easeIn,
+        TweenSequenceItem<double>(
+          tween: Tween<double>(
+            begin: 1.0,
+            end: 1,
+          ).chain(
+            CurveTween(
+              curve: Curves.bounceIn
+            ),
           ),
+          weight: 50,
         ),
-        weight: 20, // Contracción a estado final
-      ),
-    ]).animate(_animationController);
+      ],
+    ).animate(_animationController);
 
     _fadeControllers = List<AnimationController>.generate(
       widget._options.length,
@@ -108,16 +124,16 @@ class _DropMenuState extends State<DropMenu> with TickerProviderStateMixin {
         );
       },
       child: Material(
-        elevation: 1,
         borderRadius: Constants.mainBorderRadius,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            minWidth: 140,
-            maxWidth: 250,
+          constraints: BoxConstraints(
+            minWidth: 120,
+            maxWidth: widget._width ?? 220,
           ),
           child: Padding(
             padding: EdgeInsets.all(Constants.paddingValue),
             child: Column(
+              spacing: 12,
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: List<Widget>.generate(
@@ -129,28 +145,24 @@ class _DropMenuState extends State<DropMenu> with TickerProviderStateMixin {
                         curve: Curves.easeIn,
                       ),
                     ),
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        top: index == 0 ? 0 : 12,
-                      ),
-                      child: Material(
-                        color: isDarkMode ? Colors.black12 : Colors.white,
-                        clipBehavior: Clip.hardEdge,
-                        borderRadius: Constants.mainBorderRadius / 2,
-                        child: InkWell(
-                          onTap: () {
-                            Navigator.of(context).pop();
-                            widget._onSelected(widget._options[index]);
-                          },
-                          child: Padding(
-                            padding: Constants.authInputContent,
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                widget._options[index].capitalize(),
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                ),
+                    child: Material(
+                      color: isDarkMode ? Colors.black12 : Colors.white,
+                      clipBehavior: Clip.hardEdge,
+                      type: MaterialType.card,
+                      borderRadius: Constants.mainBorderRadius / 2,
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          widget._onSelected(widget._options[index]);
+                        },
+                        child: Padding(
+                          padding: Constants.authInputContent,
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              widget._options[index].capitalize(),
+                              style: const TextStyle(
+                                fontSize: 16,
                               ),
                             ),
                           ),
